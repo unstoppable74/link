@@ -1,4 +1,4 @@
-name: Windows Full Build (ASIO + Tests)  
+name: Windows Build (ASIO + Tests)  
   
 on:  
   push:  
@@ -8,10 +8,12 @@ on:
   workflow_dispatch:  
   
 jobs:  
-  windows-asio:  
+  windows:  
     strategy:  
       matrix:  
-        configuration: [Debug, Release]  
+        include:  
+          - configuration: Debug  
+          - configuration: Release  
       fail-fast: false  
   
     runs-on: windows-2022  
@@ -22,58 +24,31 @@ jobs:
         with:  
           submodules: recursive  
   
-      # configure_asio() 会从 Steinberg 官网下载 ASIO SDK 并解压到  
-      # build/modules/asiosdk_2.3.3_2019-06-14/，此步骤无需额外操作。  
-      # 若需离线使用仓库内已有的 ASIOSDK/，需修改 examples/CMakeLists.txt  
-      # 中的 configure_asio() 函数以支持自定义路径。  
-      - name: Configure (ASIO + Tests)  
-        shell: pwsh  
+      # CMake 配置阶段会自动调用 configure_asio() 下载 ASIO SDK  
+      # 到 build/modules/ 目录，与仓库中已有的 ASIOSDK/ 目录无关  
+      - name: Configure (CMake downloads ASIO SDK automatically)  
         run: |  
-          cmake -B build . `  
+          cmake -B build `  
             -G "Visual Studio 17 2022" `  
             -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} `  
             -DLINK_BUILD_ASIO=ON `  
-            -DLINK_BUILD_TESTS=ON `  
-            -DLINK_WINDOWS_SETTHREADDESCRIPTION=ON  
+            -DLINK_BUILD_TESTS=ON  
   
-      - name: Build  
+      - name: Build Examples and Tests  
         run: cmake --build build --config ${{ matrix.configuration }}  
   
       - name: Run Tests  
-        shell: pwsh  
         run: |  
-          $cfg = "${{ matrix.configuration }}"  
-          Write-Host "=== LinkCoreTest ==="  
-          & ".\build\bin\$cfg\LinkCoreTest.exe"  
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }  
+          .\build\bin\${{ matrix.configuration }}\LinkCoreTest.exe  
+          .\build\bin\${{ matrix.configuration }}\LinkDiscoveryTest.exe  
+          .\build\bin\${{ matrix.configuration }}\LinkAudioTest.exe  
   
-          Write-Host "=== LinkDiscoveryTest ==="  
-          & ".\build\bin\$cfg\LinkDiscoveryTest.exe"  
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }  
-  
-          Write-Host "=== LinkAudioTest ==="  
-          & ".\build\bin\$cfg\LinkAudioTest.exe"  
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }  
-  
-          Write-Host "=== LinkUtilTest ==="  
-          & ".\build\bin\$cfg\LinkUtilTest.exe"  
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }  
-  
-      - name: Upload example executables  
+      - name: Upload Example Executables  
         uses: actions/upload-artifact@v4  
         with:  
-          name: windows-examples-${{ matrix.configuration }}  
+          name: link-examples-windows-${{ matrix.configuration }}  
           path: |  
-            build/bin/${{ matrix.configuration }}/LinkHut.exe  
-            build/bin/${{ matrix.configuration }}/LinkAudioHut.exe  
-            build/bin/${{ matrix.configuration }}/LinkHutSilent.exe  
-  
-      - name: Upload test executables  
-        uses: actions/upload-artifact@v4  
-        with:  
-          name: windows-tests-${{ matrix.configuration }}  
-          path: |  
-            build/bin/${{ matrix.configuration }}/LinkCoreTest.exe  
-            build/bin/${{ matrix.configuration }}/LinkDiscoveryTest.exe  
-            build/bin/${{ matrix.configuration }}/LinkAudioTest.exe  
-            build/bin/${{ matrix.configuration }}/LinkUtilTest.exe
+            build\bin\${{ matrix.configuration }}\LinkHut.exe  
+            build\bin\${{ matrix.configuration }}\LinkAudioHut.exe  
+            build\bin\${{ matrix.configuration }}\LinkHutSilent.exe  
+          if-no-files-found: error
