@@ -1,0 +1,71 @@
+name: Build Windows  
+  
+on:  
+  push:  
+    branches: ["**"]  
+  pull_request:  
+  workflow_dispatch:  
+  
+jobs:  
+  build:  
+    runs-on: windows-2022  
+  
+    steps:  
+      - name: Checkout repository (with submodules)  
+        uses: actions/checkout@v4  
+        with:  
+          submodules: recursive  
+  
+      # examples/CMakeLists.txt 的 configure_asio() 在 configure 阶段  
+      # 自动下载 asiosdk_2.3.3_2019-06-14.zip，无需手动指定路径。  
+      # 缓存下载目录以加速后续运行。  
+      - name: Cache ASIO SDK download  
+        uses: actions/cache@v4  
+        with:  
+          path: build/modules  
+          key: asio-sdk-2.3.3-2019-06-14  
+  
+      - name: Configure CMake  
+        shell: pwsh  
+        run: |  
+          cmake -B build -S . `  
+            -G "Visual Studio 17 2022" -A x64 `  
+            -DLINK_BUILD_ASIO=ON `  
+            -DLINK_BUILD_TESTS=ON  
+  
+      - name: Build all targets  
+        shell: pwsh  
+        run: cmake --build build --config Release --parallel  
+  
+      # LinkAudioTest 可能因 CI 环境无音频硬件而失败，  
+      # 如遇此情况可为该步骤添加 continue-on-error: true  
+      - name: Run test suites  
+        shell: pwsh  
+        run: |  
+          .\build\bin\Release\LinkCoreTest.exe      --reporter console  
+          .\build\bin\Release\LinkDiscoveryTest.exe --reporter console  
+          .\build\bin\Release\LinkAudioTest.exe     --reporter console  
+          .\build\bin\Release\LinkUtilTest.exe      --reporter console  
+  
+      - name: Upload example executables  
+        uses: actions/upload-artifact@v4  
+        with:  
+          name: link-windows-examples  
+          path: |  
+            build/bin/Release/LinkHut.exe  
+            build/bin/Release/LinkAudioHut.exe  
+            build/bin/Release/LinkHutSilent.exe  
+            build/bin/Release/link_hut.exe  
+            build/bin/Release/link_audio_hut.exe  
+          if-no-files-found: warn  
+  
+      - name: Upload test executables  
+        uses: actions/upload-artifact@v4  
+        with:  
+          name: link-windows-tests  
+          path: |  
+            build/bin/Release/LinkCoreTest.exe  
+            build/bin/Release/LinkDiscoveryTest.exe  
+            build/bin/Release/LinkAudioTest.exe  
+            build/bin/Release/LinkUtilTest.exe  
+          if-no-files-found: warn
