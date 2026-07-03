@@ -32,13 +32,18 @@ jobs:
         run: |  
           .\build\bin\${{ matrix.configuration }}\LinkCoreTest.exe  
           .\build\bin\${{ matrix.configuration }}\LinkDiscoveryTest.exe  
+          .\build\bin\${{ matrix.configuration }}\LinkUtilTest.exe  
   
-      - name: Upload Example Executables  
+      - name: Upload Artifacts  
         uses: actions/upload-artifact@v4  
         with:  
-          name: link-examples-windows-${{ matrix.configuration }}  
+          name: link-windows-${{ matrix.configuration }}  
           path: |  
             build\bin\${{ matrix.configuration }}\LinkHut.exe  
             build\bin\${{ matrix.configuration }}\LinkAudioHut.exe  
             build\bin\${{ matrix.configuration }}\LinkHutSilent.exe  
+            build\bin\${{ matrix.configuration }}\LinkCoreTest.exe  
+            build\bin\${{ matrix.configuration }}\LinkDiscoveryTest.exe  
+            build\bin\${{ matrix.configuration }}\LinkAudioTest.exe  
+            build\bin\${{ matrix.configuration }}\LinkUtilTest.exe  
           if-no-files-found: error
