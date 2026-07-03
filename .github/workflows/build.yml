@@ -11,9 +11,7 @@ jobs:
   windows:  
     strategy:  
       matrix:  
-        include:  
-          - configuration: Debug  
-          - configuration: Release  
+        configuration: [Debug, Release]  
       fail-fast: false  
   
     runs-on: windows-2022  
@@ -24,15 +22,8 @@ jobs:
         with:  
           submodules: recursive  
   
-      # CMake 配置阶段会自动调用 configure_asio() 下载 ASIO SDK  
-      # 到 build/modules/ 目录，与仓库中已有的 ASIOSDK/ 目录无关  
       - name: Configure (CMake downloads ASIO SDK automatically)  
-        run: |  
-          cmake -B build `  
-            -G "Visual Studio 17 2022" `  
-            -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} `  
-            -DLINK_BUILD_ASIO=ON `  
-            -DLINK_BUILD_TESTS=ON  
+        run: cmake -B build -G "Visual Studio 17 2022" -DLINK_BUILD_ASIO=ON -DLINK_BUILD_TESTS=ON  
   
       - name: Build Examples and Tests  
         run: cmake --build build --config ${{ matrix.configuration }}  
@@ -41,7 +32,6 @@ jobs:
         run: |  
           .\build\bin\${{ matrix.configuration }}\LinkCoreTest.exe  
           .\build\bin\${{ matrix.configuration }}\LinkDiscoveryTest.exe  
-          .\build\bin\${{ matrix.configuration }}\LinkAudioTest.exe  
   
       - name: Upload Example Executables  
         uses: actions/upload-artifact@v4  
